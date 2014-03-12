@@ -30,176 +30,184 @@ var wrapper = function(patterns) {
   };
 };
 
-/**
- * Permalinks Plugin
- * @param  {Object}   params
- * @param  {Function} callback
- * @return {String}   The permalink string
- */
-module.exports = function(params, callback) {
+module.exports = function (assemble) {
 
-  'use strict';
+  /**
+   * Permalinks Plugin
+   * @param  {Object}   params
+   * @param  {Function} callback
+   * @return {String}   The permalink string
+   */
+  var plugin = function(params, callback) {
 
-  var assemble       = params.assemble;
-  var grunt          = params.grunt;
+    'use strict';
 
-  var options        = assemble.options.permalinks;
-  var pages          = assemble.options.pages;
-  var originalAssets = assemble.options.originalAssets;
+    var options        = assemble.options.permalinks;
+    var pages          = assemble.components;
+    var originalAssets = assemble.options.assets;
 
-  // Skip over the plugin if it isn't defined in the options.
-  if(!_.isUndefined(options)) {
+    // Skip over the plugin if it isn't defined in the options.
+    if(!_.isUndefined(options)) {
 
-    var i = 0;
-    var len = pages.length;
+      var i = 0;
+      var len = pages.length;
 
-    async.forEach(pages, function(page, next) {
+      async.forEach(_.keys(pages), function(key, next) {
 
-      i++;
+        var page = pages[key];
 
-      // Slugify basenames by default.
-      options.slugify = true;
+        i++;
 
-      // Get the permalink pattern to use from options.permalinks.structure.
-      // If one isn't defined, don't change anything.
-      var structure = options.structure;
+        // Slugify basenames by default.
+        options.slugify = true;
 
-      // Convenience variable for YAML front matter.
-      var yfm  = page.data;
+        // Get the permalink pattern to use from options.permalinks.structure.
+        // If one isn't defined, don't change anything.
+        var structure = options.structure;
 
-      /**
-       * EXCLUSION PATTERNS OPTION
-       * Properties to omit from the params object.
-       */
-      var exclusions = ['_page', 'data', 'filePair', 'page', 'pageName'];
-          exclusions = _.union([], exclusions, options.exclusions || []);
+        // Convenience variable for YAML front matter.
+        var yfm  = page.metadata;
+
+        /**
+         * EXCLUSION PATTERNS OPTION
+         * Properties to omit from the params object.
+         */
+        var exclusions = ['_page', 'data', 'filePair', 'page', 'pageName'];
+            exclusions = _.union([], exclusions, options.exclusions || []);
 
 
-      /**
-       * `slugify` option
-       * Ensure that basenames are suitable to be used as URLs.
-       */
-      if(options.slugify) {
-        if(!yfm.slug) {
-          page.slug = _str.slugify(page.basename);
+        /**
+         * `slugify` option
+         * Ensure that basenames are suitable to be used as URLs.
+         */
+        if(options.slugify) {
+          if(!yfm.slug) {
+            page.metadata.slug = _str.slugify(page.metadata.basename);
+          }
+          page.metadata.basename = _str.slugify(page.metadata.basename);
         }
-        page.basename = _str.slugify(page.basename);
-      }
 
-      /**
-       * Strip leading numbers from pages
-       * Works well with `:num` pattern
-       * @examples
-       *   010foo.html,011bar.html => foo.html,bar.html
-       */
-      if(options.stripnumber === true) {
-        page.basename = page.basename.replace(/^\d+\-?/, '');
-      }
+        /**
+         * Strip leading numbers from pages
+         * Works well with `:num` pattern
+         * @examples
+         *   010foo.html,011bar.html => foo.html,bar.html
+         */
+        if(options.stripnumber === true) {
+          page.metadata.basename = page.metadata.basename.replace(/^\d+\-?/, '');
+        }
 
 
-      // Best guesses at some useful patterns
-      var specialPatterns = {
-        'category': new strings.Pattern(/:\bcategory\b/, _str.slugify(_.first(yfm.categories))),
-        'num': new strings.Pattern(/:\bnum\b/, digits.pad(i, {auto: len})),
-        'digits': new strings.Pattern(/:(0)+/, function (match) {
-            var matchLen = String(match).length - 1;
-            return digits.pad(i, {digits: matchLen});
-          }),
-        'random': new strings.Pattern(/:random\(([^)]+)\)/, function (a, b) {
-            var len, chars;
-            if(b.match(/,/)) {
-              len = parseInt(b.split(',')[1], 10);
-              chars = b.split(',')[0];
-              return utils.randomize(chars, len);
-            } else {
-              var len = b.length;
-              return utils.randomize(b, len);
-            }
-          })
-      };
-
-      // register the replacements as middleware
-      strings
-        .use(specialPatterns) // specialPatterns
-
-        // expose page data to Strings
-        .use(page)
-
-        // expose yfm data to Strings
-        .use(yfm)
-
-        // use the yfm.date for dates
-        .use(strings.dates(yfm.date, _.pick(options, 'lang'))) // datePatterns
-
-        // wrap any additional patterns
-        .use(wrapper(options.patterns || []))
-
-        // exclude some fields
-        .exclude(exclusions)
-      ;
-
-      /**
-       * PRESETS
-       * Pre-formatted permalink structures. If a preset is defined, append
-       * it to the user-defined structure.
-       */
-      if(options.preset && String(options.preset).length !== 0) {
-
-        // The preset
-        var presets = {
-          numbered:  path.join((structure || ''), ':num-:basename:ext'),
-          pretty:    path.join((structure || ''), ':basename/index:ext'),
-          dayname:   path.join((structure || ''), ':YYYY/:MM/:DD/:basename/index:ext'),
-          monthname: path.join((structure || ''), ':YYYY/:MM/:basename/index:ext')
+        // Best guesses at some useful patterns
+        var specialPatterns = {
+          'category': new strings.Pattern(/:\bcategory\b/, _str.slugify(_.first(yfm.categories))),
+          'num': new strings.Pattern(/:\bnum\b/, digits.pad(i, {auto: len})),
+          'digits': new strings.Pattern(/:(0)+/, function (match) {
+              var matchLen = String(match).length - 1;
+              return digits.pad(i, {digits: matchLen});
+            }),
+          'random': new strings.Pattern(/:random\(([^)]+)\)/, function (a, b) {
+              var len, chars;
+              if(b.match(/,/)) {
+                len = parseInt(b.split(',')[1], 10);
+                chars = b.split(',')[0];
+                return utils.randomize(chars, len);
+              } else {
+                var len = b.length;
+                return utils.randomize(b, len);
+              }
+            })
         };
-        // Presets are joined to structures, so if a preset is specified
-        // use the preset the new structure.
-        structure = String(_.values(_.pick(presets, options.preset)));
-      }
 
+        // register the replacements as middleware
+        strings
+          .use(specialPatterns) // specialPatterns
 
-      // Generate a javascript file with all non-function replacement patterns
-      if(options.debug) {
-        if(typeof(options.debug) === 'string') {
-          //grunt.file.write(options.debug, require('util').inspect(replacements));
-        } else {
-          throw console.error('"options.debug" must be a file path.');
+          // expose page data to Strings
+          .use(page.metadata)
+
+          // expose yfm data to Strings
+          .use(yfm)
+
+          // use the yfm.date for dates
+          .use(strings.dates(yfm.date, _.pick(options, 'lang'))) // datePatterns
+
+          // wrap any additional patterns
+          .use(wrapper(options.patterns || []))
+
+          // exclude some fields
+          .exclude(exclusions)
+        ;
+
+        /**
+         * PRESETS
+         * Pre-formatted permalink structures. If a preset is defined, append
+         * it to the user-defined structure.
+         */
+        if(options.preset && String(options.preset).length !== 0) {
+
+          // The preset
+          var presets = {
+            numbered:  path.join((structure || ''), ':num-:basename:ext'),
+            pretty:    path.join((structure || ''), ':basename/index:ext'),
+            dayname:   path.join((structure || ''), ':YYYY/:MM/:DD/:basename/index:ext'),
+            monthname: path.join((structure || ''), ':YYYY/:MM/:basename/index:ext')
+          };
+          // Presets are joined to structures, so if a preset is specified
+          // use the preset the new structure.
+          structure = String(_.values(_.pick(presets, options.preset)));
         }
-      }
 
-      /**
-       * CREATE PERMALINKS
-       * Construct the permalink string. Modifies string with an array
-       * of replacement patterns passed into options.patterns
-       */
-      var permalink = strings.run(structure || page.dest);
 
-      /**
-       * WRITE PERMALINKS
-       * Append the permalink to the dest path defined in the target.
-       */
-      if(_.isUndefined(options.structure) && _.isUndefined(options.preset)) {
-        page.dest = page.dest;
-      } else {
-        if (page.basename === 'index') {
-          page.dest = page.dest;
-        } else {
-          page.dest = utils.normalizePath(path.join(page.dirname, permalink));
+        // Generate a javascript file with all non-function replacement patterns
+        if(options.debug) {
+          if(typeof(options.debug) === 'string') {
+            //grunt.file.write(options.debug, require('util').inspect(replacements));
+          } else {
+            throw console.error('"options.debug" must be a file path.');
+          }
         }
-      }
 
-      page.assets = utils.calculatePath(page.dest, originalAssets, originalAssets);
+        /**
+         * CREATE PERMALINKS
+         * Construct the permalink string. Modifies string with an array
+         * of replacement patterns passed into options.patterns
+         */
+        var permalink = strings.run(structure || page.dest);
 
-      grunt.verbose.ok('page'.yellow, page);
-      grunt.verbose.ok('page.dest'.yellow, page.dest);
-      grunt.verbose.ok('page.assets'.yellow, page.assets);
-      grunt.verbose.ok('Generated permalink for:'.yellow, page.dest);
-      next();
-    });
+        /**
+         * WRITE PERMALINKS
+         * Append the permalink to the dest path defined in the target.
+         */
+        if(_.isUndefined(options.structure) && _.isUndefined(options.preset)) {
+          page.dest = page.metadata.dest = page.dest;
+        } else {
+          if (page.metadata.basename === 'index') {
+            page.dest = page.metadata.dest = page.dest;
+          } else {
+            page.dest = utils.normalizePath(path.join(page.metadata.dirname, permalink));
+          }
+        }
 
-  } callback();
-};
+        page.metadata.assets = utils.calculatePath(page.dest, originalAssets, originalAssets);
 
-module.exports.options = {
-  stage: 'render:pre:pages'
+        assemble.log.debug('page'.yellow, page);
+        assemble.log.debug('page.dest'.yellow, page.dest);
+        assemble.log.debug('page.assets'.yellow, page.metadata.assets);
+        assemble.log.debug('Generated permalink for:'.yellow, page.dest);
+        next();
+      });
+
+    } callback();
+  };
+
+  plugin.options = {
+    name: 'assemble-contrib-permalinks',
+    event: 'assemble:before:render'
+  };
+
+  var rtn = {};
+  rtn[plugin.options.name] = plugin;
+  return rtn;
+
 };

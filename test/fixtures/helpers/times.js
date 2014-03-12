@@ -10,30 +10,27 @@
 var path = require('path');
 var fs = require('fs');
 
+// node_modules
+var Handlebars = require('handlebars');
 
 // Export helpers
-module.exports.register = function (Handlebars, options, params) {
-
+module.exports = function (config) {
   /**
    * {{times}}
    */
-  exports.times = function(value, options) {
-    var data, i, content = "";
+  return {
+    times: function(value, options) {
+      var data, i, content = "";
 
-    for (i = 1; i <= value; i++) {
-      if (options.data) {
-        data = Handlebars.createFrame(options.data || {});
-        data.index = i;
+      for (i = 1; i <= value; i++) {
+        if (options.data) {
+          data = Handlebars.createFrame(options.data || {});
+          data.index = i;
+        }
+        content = content + options.fn(this, { data: data });
       }
-      content = content + options.fn(this, { data: data });
+      return content;
     }
-    return content;
   };
-
-  for (var helper in exports) {
-    if (exports.hasOwnProperty(helper)) {
-      Handlebars.registerHelper(helper, exports[helper]);
-    }
-  }
 };
 

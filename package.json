@@ -39,10 +39,8 @@
     "grunt-repos": "~0.1.2",
     "handlebars-helper-eachitems": "~0.1.2",
     "handlebars-helper-paginate": "~0.2.0",
-    "grunt-prettify": "~0.3.1"
-  },
-  "peerDependencies": {
-    "assemble": "~0.4.12"
+    "grunt-prettify": "~0.3.1",
+    "grunt-assemble": "~0.1.5"
   },
   "keywords": [
     "assemble",
