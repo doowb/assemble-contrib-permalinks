@@ -41,7 +41,7 @@ module.exports = function(grunt) {
         assets: 'test/assets',
 
         log: {
-          level: 'info',
+          level: 'warning',
           theme: 'socket.io'
         }
       },

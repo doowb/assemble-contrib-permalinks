@@ -11,11 +11,11 @@ var path = require('path');
 var fs = require('fs');
 
 // node_modules
-var Handlebars = require('handlebars');
 var _ = require('lodash');
 
 // Export helpers
 module.exports = function (config) {
+  var Handlebars = config.Handlebars;
   /**
    * {{pagination}}
    * Adds a pagination to enable navigating to prev and next page/post.

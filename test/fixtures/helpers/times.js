@@ -10,11 +10,9 @@
 var path = require('path');
 var fs = require('fs');
 
-// node_modules
-var Handlebars = require('handlebars');
-
 // Export helpers
 module.exports = function (config) {
+  var Handlebars = config.Handlebars;
   /**
    * {{times}}
    */

@@ -40,6 +40,8 @@ module.exports = function (assemble) {
    */
   var plugin = function(params, callback) {
 
+    debugger;
+
     'use strict';
 
     var options        = assemble.options.permalinks;
